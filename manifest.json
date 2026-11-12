@@ -1,0 +1,73 @@
+{
+  "id": "/",
+  "name": "Adaptive AI Daily Scheduler",
+  "short_name": "Scheduler",
+  "description": "Adaptive daily study planner with collision detection, emergency task compression, and circadian sleep correction.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "orientation": "portrait-primary",
+  "theme_color": "#090d16",
+  "background_color": "#090d16",
+  "categories": ["productivity", "education"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "540x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Adaptive AI Daily Scheduler Mobile View"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Adaptive AI Daily Scheduler Desktop View"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daily Planner",
+      "short_name": "Planner",
+      "description": "Configure today's wake time and tasks",
+      "url": "/?tab=planner",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Day Timeline",
+      "short_name": "Timeline",
+      "description": "View continuous flow timeline",
+      "url": "/?tab=timeline",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
