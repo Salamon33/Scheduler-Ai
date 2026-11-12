@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Adaptive AI Daily Scheduler</title>
+  <meta name="description" content="Dynamic daily study planner with collision detection, emergency task compression, and circadian sleep reset protocol." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: #090d16;
+      color: #f1f5f9;
+    }
+    code, pre, .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-[#090d16] text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-40 w-full border-b border-slate-800 bg-[#090d16]/95 backdrop-blur-md">
+    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-sm ring-1 ring-white/20">
+          <i data-lucide="sparkles" class="h-4 w-4"></i>
+        </div>
+        <span class="text-base font-bold tracking-tight text-white">ADAPTIVE SCHEDULER</span>
+      </div>
+
+      <!-- DESKTOP NAV -->
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+        <button onclick="switchTab('planner')" id="nav-planner" class="nav-btn py-1 border-b-2 border-indigo-500 text-white font-semibold transition-colors">Daily Planner</button>
+        <button onclick="switchTab('timeline')" id="nav-timeline" class="nav-btn py-1 border-b-2 border-transparent hover:text-slate-200 transition-colors">Day Timeline</button>
+        <button onclick="switchTab('circadian')" id="nav-circadian" class="nav-btn py-1 border-b-2 border-transparent hover:text-slate-200 transition-colors">Circadian Sleep Shift</button>
+      </nav>
+
+      <!-- TOP ACTIONS -->
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <button onclick="copyScheduleText()" class="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition-all min-h-[38px]">
+          <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+          <span class="hidden sm:inline">Copy Text</span>
+        </button>
+        <button onclick="exportICSFile()" class="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition-all min-h-[38px]">
+          <i data-lucide="calendar" class="h-3.5 w-3.5"></i>
+          <span class="hidden sm:inline">Export .ICS</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MOBILE NAV -->
+    <div class="flex md:hidden items-center justify-around border-t border-slate-800/80 bg-slate-900/80 px-2 py-1 text-xs gap-1">
+      <button onclick="switchTab('planner')" id="mob-planner" class="flex-1 min-h-[44px] flex items-center justify-center rounded-md font-medium bg-indigo-600/30 text-indigo-300 font-semibold">Planner</button>
+      <button onclick="switchTab('timeline')" id="mob-timeline" class="flex-1 min-h-[44px] flex items-center justify-center rounded-md font-medium text-slate-400">Timeline</button>
+      <button onclick="switchTab('circadian')" id="mob-circadian" class="flex-1 min-h-[44px] flex items-center justify-center rounded-md font-medium text-slate-400">Sleep Shift</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">
+
+    <!-- TAB 1: DAILY PLANNER -->
+    <section id="tab-planner" class="space-y-6 sm:space-y-8">
+      
+      <!-- CONFIGURATION CARD -->
+      <div class="rounded-2xl border border-slate-800 bg-[#0d1424] p-5 sm:p-7 shadow-xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800/80 gap-3">
+          <div>
+            <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-2">
+              <i data-lucide="sliders" class="h-4 w-4 text-indigo-400"></i>
+              Daily Parameters & Task Sequence
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Input your actual wake-up time, locked lessons, and custom subject order</p>
+          </div>
+          <button onclick="runScheduler()" class="flex items-center justify-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:scale-95 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition-all min-h-[40px]">
+            <i data-lucide="refresh-cw" class="h-3.5 w-3.5"></i>
+            <span>Calculate Timeline</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Actual Wake-up Time -->
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-300 block">Actual Wake-up Time</label>
+            <input type="time" id="input-wake-time" value="10:00" onchange="runScheduler()" class="w-full rounded-lg border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-sm font-mono text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            <div class="flex gap-1.5 pt-1">
+              <button onclick="setWakePreset('05:00')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300">05:00 (Goal)</button>
+              <button onclick="setWakePreset('08:00')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300">08:00</button>
+              <button onclick="setWakePreset('10:00')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300">10:00 (Late)</button>
+            </div>
+          </div>
+
+          <!-- Target Bedtime -->
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-300 block">Target Bedtime Tonight</label>
+            <input type="time" id="input-bedtime" value="23:00" onchange="runScheduler()" class="w-full rounded-lg border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-sm font-mono text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            <p class="text-[11px] text-slate-400">Sleep cutoff anchor for today's study blocks</p>
+          </div>
+
+          <!-- Major Science Toggle -->
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-300 block">Major Science Subject (2h)</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" id="btn-science-bio" onclick="setScience('Biology')" class="py-2.5 px-3 rounded-lg border border-indigo-500 bg-indigo-950/60 text-white font-semibold text-xs transition-all">Biology</button>
+              <button type="button" id="btn-science-chem" onclick="setScience('Chemistry')" class="py-2.5 px-3 rounded-lg border border-slate-700 bg-slate-900/60 text-slate-400 font-semibold text-xs hover:text-white transition-all">Chemistry</button>
+            </div>
+            <p class="text-[11px] text-slate-400">1h Theory Review + 1h Active Problem Solving</p>
+          </div>
+        </div>
+
+        <!-- FIXED CONSTRAINTS / EXTERNAL LESSONS -->
+        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="lock" class="h-3.5 w-3.5 text-amber-400"></i>
+              Locked Events & Lessons (Collision Detection)
+            </span>
+            <button onclick="addFixedEvent()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+              <i data-lucide="plus" class="h-3.5 w-3.5"></i> Add Block
+            </button>
+          </div>
+          <div id="fixed-events-container" class="space-y-2"></div>
+        </div>
+
+        <!-- CUSTOM TASK SEQUENCING -->
+        <div class="pt-2 border-t border-slate-800/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="arrow-up-down" class="h-3.5 w-3.5 text-indigo-400"></i>
+              Custom Task Sequencing (Execution Order)
+            </span>
+            <span class="text-[11px] text-slate-400">Use arrows to prioritize subjects</span>
+          </div>
+          <div id="task-sequence-container" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"></div>
+        </div>
+      </div>
+
+      <!-- CONTINUOUS DAY TIMELINE VISUALIZER -->
+      <div id="visualizer-container" class="rounded-xl border border-slate-800 bg-[#0d1424] p-4 sm:p-5 shadow-lg space-y-3"></div>
+
+      <!-- MANDATORY 30-MIN MORNING BUFFER CHECKLIST -->
+      <div class="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 sm:p-5 shadow-lg space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="sun" class="h-4 w-4 text-amber-400"></i>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-300">
+              Mandatory 30-Minute Morning Routine Buffer
+            </h3>
+          </div>
+          <span class="text-[10px] font-mono text-amber-400 bg-amber-950 px-2 py-0.5 rounded border border-amber-500/30">NON-NEGOTIABLE</span>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          The engine locks the first 30 minutes following wake-up for physiological reset, prayer, and mental clarity before any study tasks begin.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs pt-1">
+          <label class="flex items-center gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:bg-slate-800/60">
+            <input type="checkbox" id="buf-1" onchange="saveBufferCheck()" class="rounded border-slate-700 text-indigo-600 focus:ring-0" />
+            <span class="text-slate-300">Morning Prayer & Duas</span>
+          </label>
+          <label class="flex items-center gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:bg-slate-800/60">
+            <input type="checkbox" id="buf-2" onchange="saveBufferCheck()" class="rounded border-slate-700 text-indigo-600 focus:ring-0" />
+            <span class="text-slate-300">Hydrate (500ml Water)</span>
+          </label>
+          <label class="flex items-center gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:bg-slate-800/60">
+            <input type="checkbox" id="buf-3" onchange="saveBufferCheck()" class="rounded border-slate-700 text-indigo-600 focus:ring-0" />
+            <span class="text-slate-300">10m Sunlight / Fresh Air</span>
+          </label>
+          <label class="flex items-center gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:bg-slate-800/60">
+            <input type="checkbox" id="buf-4" onchange="saveBufferCheck()" class="rounded border-slate-700 text-indigo-600 focus:ring-0" />
+            <span class="text-slate-300">Clear Desk & Setup</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- SCHEDULE CARDS TIMELINE -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+            <i data-lucide="calendar-check" class="h-4 w-4 text-emerald-400"></i>
+            Scheduled Time Blocks & Micro-Deliverables
+          </h3>
+          <span id="schedule-stat-badge" class="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300"></span>
+        </div>
+        <div id="schedule-cards-container" class="space-y-3.5"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: DAY TIMELINE -->
+    <section id="tab-timeline" class="hidden space-y-6">
+      <div class="rounded-2xl border border-slate-800 bg-[#0d1424] p-5 sm:p-7 shadow-xl space-y-5">
+        <h3 class="text-base font-bold text-white tracking-tight flex items-center gap-2">
+          <i data-lucide="clock" class="h-4 w-4 text-indigo-400"></i>
+          Continuous Day Schedule & Progression
+        </h3>
+        <div id="timeline-flow-container" class="space-y-4"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: CIRCADIAN SLEEP SHIFT -->
+    <section id="tab-circadian" class="hidden space-y-6">
+      <div id="circadian-content-container" class="space-y-6"></div>
+    </section>
+
+  </main>
+
+  <!-- FOCUS TIMER MODAL -->
+  <div id="focus-timer-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+    <div class="relative w-full max-w-md rounded-2xl border border-indigo-500/40 bg-[#0c121e] p-6 sm:p-8 shadow-2xl text-center space-y-6">
+      <button onclick="closeFocusTimer()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-2">
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+
+      <div class="space-y-1">
+        <span id="timer-badge" class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/30">Active Focus Block</span>
+        <h3 id="timer-title" class="text-lg font-bold text-white tracking-tight pt-1">Task Title</h3>
+        <p id="timer-time-range" class="text-xs text-slate-400 font-mono">10:30 AM - 11:45 AM</p>
+      </div>
+
+      <!-- TIMER CIRCLE DISPLAY -->
+      <div class="relative w-48 h-48 mx-auto flex items-center justify-center">
+        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" stroke-width="6" />
+          <circle id="timer-progress-ring" cx="50" cy="50" r="42" fill="none" stroke="#6366f1" stroke-width="6" stroke-dasharray="264" stroke-dashoffset="0" stroke-linecap="round" class="transition-all duration-1000 ease-linear" />
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span id="timer-countdown" class="text-3xl font-extrabold font-mono text-white">00:00</span>
+          <span id="timer-status-text" class="text-[10px] uppercase font-mono tracking-widest text-indigo-300 mt-1">Ready</span>
+        </div>
+      </div>
+
+      <!-- CONTROLS -->
+      <div class="flex items-center justify-center gap-3">
+        <button id="btn-timer-toggle" onclick="toggleTimer()" class="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg transition-all min-h-[40px] flex items-center gap-1.5">
+          <i data-lucide="play" class="h-4 w-4"></i>
+          <span id="btn-timer-toggle-label">Start Focus</span>
+        </button>
+        <button onclick="resetTimer()" class="px-3.5 py-2.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors min-h-[40px]">
+          Reset
+        </button>
+      </div>
+
+      <!-- SUBTASKS INSIDE TIMER -->
+      <div class="text-left pt-2 border-t border-slate-800 space-y-2">
+        <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">Deliverables for this block:</span>
+        <div id="timer-subtasks-list" class="space-y-1.5 text-xs max-h-36 overflow-y-auto custom-scrollbar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden items-center gap-2 rounded-lg border border-indigo-500/40 bg-indigo-950 px-4 py-2.5 text-xs font-semibold text-white shadow-xl animate-in fade-in">
+    <i data-lucide="check-circle" class="h-4 w-4 text-emerald-400"></i>
+    <span id="toast-text">Alert</span>
+  </div>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script>
+    // CORE APPLICATION STATE
+    const DEFAULT_CONFIG = {
+      actualWakeTime: '10:00',
+      targetWakeTime: '05:00',
+      targetBedtime: '23:00',
+      morningBufferMin: 30,
+      scienceChoice: 'Biology',
+      fixedEvents: [
+        { id: 'fe-1', name: 'External Lessons / Classes', startTime: '16:00', endTime: '18:00' }
+      ],
+      subjectSequence: ['quran', 'major_science', 'islamic_studies'],
+      customSubtasks: {},
+      completedTasks: {},
+      bufferChecks: {}
+    };
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem('adaptive_scheduler_singlefile_v1');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem('adaptive_scheduler_singlefile_v1', JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    // WEB AUDIO SOUND SYNTHESIZER (0 external audio dependencies)
+    function playChime(type) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (type === 'start') {
+          playTone(ctx, 523.25, 0, 0.15); // C5
+          playTone(ctx, 659.25, 0.12, 0.25); // E5
+        } else if (type === 'complete') {
+          playTone(ctx, 523.25, 0, 0.12);
+          playTone(ctx, 659.25, 0.1, 0.12);
+          playTone(ctx, 783.99, 0.2, 0.35); // G5
+        }
+      } catch (e) {}
+    }
+
+    function playTone(ctx, freq, delay, dur) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + delay + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + dur);
+    }
+
+    // TIME UTILITIES
+    function toMinutes(t) {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function toTimeString(m) {
+      const h = Math.floor(m / 60) % 24;
+      const min = Math.round(m % 60);
+      return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    }
+
+    function formatTime12(t) {
+      const [hStr, mStr] = t.split(':');
+      let h = parseInt(hStr, 10);
+      const m = mStr;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12;
+      h = h ? h : 12;
+      return `${h}:${m} ${ampm}`;
+    }
+
+    // COLLISION DETECTION & ADAPTIVE COMPRESSION SCHEDULING ENGINE
+    function calculateSchedule() {
+      const wakeM = toMinutes(state.actualWakeTime);
+      const bufferEndM = wakeM + state.morningBufferMin;
+      let bedM = toMinutes(state.targetBedtime);
+      if (bedM <= wakeM) bedM += 24 * 60; // Next day bedtime
+
+      // Base task templates
+      const templates = {
+        quran: {
+          id: 'quran',
+          title: 'Quran (Recitation, Hifz & Tafseer)',
+          nominalMin: 75, // 1h 15m
+          floorMin: 50,
+          color: 'emerald',
+          defaultSubtasks: [
+            'Tilawah & Recitation (30m)',
+            'Hifz Memorization Review (25m)',
+            'Tafseer & Reflection Note (20m)'
+          ]
+        },
+        major_science: {
+          id: 'major_science',
+          title: `Major Science: ${state.scienceChoice} (Theory & Past Papers)`,
+          nominalMin: 120, // 2h
+          floorMin: 75,
+          color: 'indigo',
+          defaultSubtasks: [
+            'High-Yield Theory / Syllabus Revision (60m)',
+            'Active Past Paper Questions & Mark Scheme (60m)'
+          ]
+        },
+        islamic_studies: {
+          id: 'islamic_studies',
+          title: 'Islamic Studies (Fiqh, Seerah & Aqeedah)',
+          nominalMin: 90, // 1.5h
+          floorMin: 60,
+          color: 'amber',
+          defaultSubtasks: [
+            'Core Text Reading & Annotations (45m)',
+            'Summary Mindmap / Flashcard Drill (45m)'
+          ]
+        }
+      };
+
+      // Locked fixed events
+      const locked = (state.fixedEvents || []).map(ev => {
+        let s = toMinutes(ev.startTime);
+        let e = toMinutes(ev.endTime);
+        if (e <= s) e += 24 * 60;
+        return { ...ev, startM: s, endM: e };
+      }).sort((a, b) => a.startM - b.startM);
+
+      // Find free intervals between bufferEnd and bedtime
+      const freeIntervals = [];
+      let cursor = bufferEndM;
+
+      for (const ev of locked) {
+        if (ev.endM <= cursor) continue;
+        if (ev.startM > cursor) {
+          const avail = Math.min(ev.startM, bedM) - cursor;
+          if (avail > 10) {
+            freeIntervals.push({ startM: cursor, endM: Math.min(ev.startM, bedM) });
+          }
+        }
+        cursor = Math.max(cursor, ev.endM);
+        if (cursor >= bedM) break;
+      }
+      if (cursor < bedM && (bedM - cursor) > 10) {
+        freeIntervals.push({ startM: cursor, endM: bedM });
+      }
+
+      const totalFreeMin = freeIntervals.reduce((acc, i) => acc + (i.endM - i.startM), 0);
+
+      // Tasks to schedule based on user's custom sequence
+      const orderedTaskIds = state.subjectSequence || ['quran', 'major_science', 'islamic_studies'];
+      const tasksToSchedule = orderedTaskIds.map(id => templates[id] || templates['quran']);
+
+      const totalNominalMin = tasksToSchedule.reduce((acc, t) => acc + t.nominalMin, 0);
+      const totalFloorMin = tasksToSchedule.reduce((acc, t) => acc + t.floorMin, 0);
+
+      // Compression algorithm
+      let mode = 'Optimal';
+      let modeBadge = 'OPTIMAL (100%)';
+      let tasksAllocated = [];
+
+      if (totalFreeMin >= totalNominalMin) {
+        mode = 'Optimal';
+        modeBadge = 'Optimal (100% Target)';
+        tasksAllocated = tasksToSchedule.map(t => ({ ...t, allocatedMin: t.nominalMin }));
+      } else if (totalFreeMin >= totalFloorMin) {
+        mode = 'Balanced Compression';
+        modeBadge = 'Balanced Compression';
+        const compressionRatio = (totalFreeMin - totalFloorMin) / (totalNominalMin - totalFloorMin);
+        tasksAllocated = tasksToSchedule.map(t => {
+          const min = Math.round(t.floorMin + (t.nominalMin - t.floorMin) * compressionRatio);
+          return { ...t, allocatedMin: min };
+        });
+      } else {
+        mode = 'Emergency Triage';
+        modeBadge = 'Emergency Triage';
+        // Give minimum floors to highest priority tasks in sequence
+        let rem = totalFreeMin;
+        tasksAllocated = tasksToSchedule.map(t => {
+          if (rem >= t.floorMin) {
+            rem -= t.floorMin;
+            return { ...t, allocatedMin: t.floorMin };
+          } else if (rem >= 30) {
+            const given = rem;
+            rem = 0;
+            return { ...t, allocatedMin: given };
+          } else {
+            return { ...t, allocatedMin: 0 };
+          }
+        }).filter(t => t.allocatedMin > 0);
+      }
+
+      // Pack tasks into free intervals
+      const scheduledItems = [];
+      let currentIntervalIdx = 0;
+      let intervalCursor = freeIntervals[0] ? freeIntervals[0].startM : bufferEndM;
+
+      for (const t of tasksAllocated) {
+        if (currentIntervalIdx >= freeIntervals.length) break;
+        let needed = t.allocatedMin;
+
+        while (needed > 0 && currentIntervalIdx < freeIntervals.length) {
+          const curInterval = freeIntervals[currentIntervalIdx];
+          const space = curInterval.endM - intervalCursor;
+
+          if (space <= 0) {
+            currentIntervalIdx++;
+            if (currentIntervalIdx < freeIntervals.length) {
+              intervalCursor = freeIntervals[currentIntervalIdx].startM;
+            }
+            continue;
+          }
+
+          const take = Math.min(needed, space);
+          scheduledItems.push({
+            id: t.id,
+            title: t.title,
+            startM: intervalCursor,
+            endM: intervalCursor + take,
+            startTime: toTimeString(intervalCursor),
+            endTime: toTimeString(intervalCursor + take),
+            durationMin: take,
+            color: t.color,
+            defaultSubtasks: t.defaultSubtasks
+          });
+
+          intervalCursor += take;
+          needed -= take;
+
+          if (intervalCursor >= curInterval.endM) {
+            currentIntervalIdx++;
+            if (currentIntervalIdx < freeIntervals.length) {
+              intervalCursor = freeIntervals[currentIntervalIdx].startM;
+            }
+          }
+        }
+      }
+
+      return {
+        mode,
+        modeBadge,
+        wakeTime: state.actualWakeTime,
+        bufferStartTime: state.actualWakeTime,
+        bufferEndTime: toTimeString(bufferEndM),
+        bedtime: state.targetBedtime,
+        totalFreeMin,
+        scheduledStudyMin: scheduledItems.reduce((acc, i) => acc + i.durationMin, 0),
+        scheduledItems,
+        lockedEvents: locked
+      };
+    }
+
+    // CIRCADIAN SLEEP SHIFT CALCULATION
+    function calculateCircadian() {
+      const wakeM = toMinutes(state.actualWakeTime);
+      const baseM = toMinutes(state.targetWakeTime);
+      const lateMinutes = Math.max(0, wakeM - baseM);
+
+      // Homeostatic sleep pressure: requires ~16h of wakefulness to build peak adenosine
+      const optimalBedM = wakeM + 16 * 60;
+      const caffeineCutoffM = optimalBedM - 10 * 60;
+
+      // Phased step-back roadmap (1.5 hours per day)
+      const roadmap = [];
+      let curWake = wakeM;
+      let day = 1;
+
+      while (curWake > baseM) {
+        roadmap.push({
+          day: `Day ${day}`,
+          wake: toTimeString(curWake),
+          bed: toTimeString((curWake + 16 * 60) % (24 * 60)),
+          step: day === 1 ? 'Current Pivot Day' : `-1.5h Step-Back`
+        });
+        curWake = Math.max(baseM, curWake - 90);
+        day++;
+      }
+      roadmap.push({
+        day: `Day ${day} (Baseline)`,
+        wake: toTimeString(baseM),
+        bed: toTimeString((baseM + 16 * 60) % (24 * 60)),
+        step: 'Target 5:00 AM Routine Restored'
+      });
+
+      return {
+        isLate: lateMinutes > 30,
+        lateMinutes,
+        recommendedBedtime: toTimeString(optimalBedM % (24 * 60)),
+        caffeineCutoff: toTimeString(caffeineCutoffM % (24 * 60)),
+        roadmap
+      };
+    }
+
+    // RENDER FUNCTIONS
+    function renderApp() {
+      const schedule = calculateSchedule();
+      const circadian = calculateCircadian();
+
+      // Render fixed events
+      const feContainer = document.getElementById('fixed-events-container');
+      feContainer.innerHTML = (state.fixedEvents || []).map((ev, idx) => `
+        <div class="flex items-center gap-2 rounded-lg bg-slate-900/60 border border-slate-800 p-2.5 text-xs">
+          <input type="text" value="${ev.name}" onchange="updateFixedEvent(${idx}, 'name', this.value)" class="flex-1 bg-transparent border-none text-slate-200 focus:outline-none" placeholder="Event Name" />
+          <input type="time" value="${ev.startTime}" onchange="updateFixedEvent(${idx}, 'startTime', this.value)" class="bg-slate-800 px-2 py-1 rounded text-slate-300 font-mono text-xs border border-slate-700" />
+          <span class="text-slate-500">to</span>
+          <input type="time" value="${ev.endTime}" onchange="updateFixedEvent(${idx}, 'endTime', this.value)" class="bg-slate-800 px-2 py-1 rounded text-slate-300 font-mono text-xs border border-slate-700" />
+          <button onclick="removeFixedEvent(${idx})" class="text-rose-400 hover:text-rose-300 p-1"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button>
+        </div>
+      `).join('') || '<p class="text-xs text-slate-500">No locked events. Tap "+ Add Block" to lock out school/lessons.</p>';
+
+      // Render custom task sequence
+      const seqContainer = document.getElementById('task-sequence-container');
+      const seqLabels = {
+        quran: 'Quran (1h 15m)',
+        major_science: `Major Science (${state.scienceChoice})`,
+        islamic_studies: 'Islamic Studies (1.5h)'
+      };
+      seqContainer.innerHTML = (state.subjectSequence || ['quran', 'major_science', 'islamic_studies']).map((id, idx) => `
+        <div class="flex items-center justify-between rounded-lg bg-slate-900/80 border border-indigo-500/20 p-2.5 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-900/80 text-indigo-300 font-mono font-bold text-[10px]">#${idx + 1}</span>
+            <span class="font-medium text-white">${seqLabels[id] || id}</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <button onclick="moveSequence(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 p-1"' : 'class="hover:text-indigo-400 p-1"'}><i data-lucide="chevron-up" class="h-3.5 w-3.5"></i></button>
+            <button onclick="moveSequence(${idx}, 1)" ${idx === state.subjectSequence.length - 1 ? 'disabled class="opacity-30 p-1"' : 'class="hover:text-indigo-400 p-1"'}><i data-lucide="chevron-down" class="h-3.5 w-3.5"></i></button>
+          </div>
+        </div>
+      `).join('');
+
+      // Render Visualizer Bar
+      const visContainer = document.getElementById('visualizer-container');
+      visContainer.innerHTML = `
+        <div class="flex items-center justify-between text-xs pb-1">
+          <span class="font-bold text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="activity" class="h-3.5 w-3.5 text-indigo-400"></i>
+            Continuous Timeline Flow: ${formatTime12(schedule.wakeTime)} → ${formatTime12(schedule.bedtime)}
+          </span>
+          <span class="font-mono text-emerald-400 text-[11px]">${Math.round(schedule.scheduledStudyMin / 60 * 10) / 10}h Allocated Study</span>
+        </div>
+        <div class="w-full h-4 rounded-full bg-slate-950 border border-slate-800 flex overflow-hidden">
+          <div style="width: 5%" class="h-full bg-amber-500/70" title="30m Morning Buffer"></div>
+          ${schedule.scheduledItems.map(item => `
+            <div style="width: ${(item.durationMin / (schedule.totalFreeMin || 1)) * 90}%" class="h-full bg-${item.color}-500/70 border-r border-slate-950" title="${item.title}: ${item.durationMin}m"></div>
+          `).join('')}
+        </div>
+      `;
+
+      // Stat Badge
+      document.getElementById('schedule-stat-badge').textContent = `${schedule.modeBadge} · ${schedule.scheduledItems.length} Blocks`;
+
+      // Render Schedule Cards
+      const cardsContainer = document.getElementById('schedule-cards-container');
+      cardsContainer.innerHTML = schedule.scheduledItems.map(item => {
+        const subtasks = state.customSubtasks[item.id] || item.defaultSubtasks.map(t => ({ text: t, done: false }));
+        const completedCount = subtasks.filter(s => s.done).length;
+        const pct = subtasks.length ? Math.round((completedCount / subtasks.length) * 100) : 0;
+        const isBlockDone = state.completedTasks[item.id] === true;
+
+        return `
+          <div class="rounded-xl border border-slate-800 bg-[#0d1424] p-4 sm:p-5 shadow-lg space-y-3.5 transition-all ${isBlockDone ? 'opacity-65' : ''}">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                    ${formatTime12(item.startTime)} - ${formatTime12(item.endTime)} (${item.durationMin}m)
+                  </span>
+                  <span class="text-[10px] font-mono text-${item.color}-400 uppercase tracking-wider font-semibold">${item.id.replace('_', ' ')}</span>
+                </div>
+                <h4 class="text-sm font-bold text-white tracking-tight ${isBlockDone ? 'line-through text-slate-400' : ''}">${item.title}</h4>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <button onclick="openFocusTimer('${item.id}', '${item.title.replace(/'/g, "\\'")}', '${formatTime12(item.startTime)} - ${formatTime12(item.endTime)}', ${item.durationMin})" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition-all">
+                  <i data-lucide="play" class="h-3.5 w-3.5"></i>
+                  <span>Focus Timer</span>
+                </button>
+                <button onclick="toggleBlockComplete('${item.id}')" class="flex items-center gap-1 px-3 py-1.5 rounded-lg ${isBlockDone ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-300 border-slate-700'} border text-xs font-medium transition-all">
+                  <i data-lucide="${isBlockDone ? 'check-circle' : 'circle'}" class="h-3.5 w-3.5"></i>
+                  <span>${isBlockDone ? 'Completed' : 'Mark Done'}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SUBTASK PROGRESS -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs text-slate-400">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Micro-Deliverables Checklist</span>
+                <span class="font-mono text-[11px]">${completedCount}/${subtasks.length} Done (${pct}%)</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                <div style="width: ${pct}%" class="h-full bg-indigo-500 transition-all duration-300"></div>
+              </div>
+            </div>
+
+            <!-- SUBTASKS LIST -->
+            <div class="space-y-1.5 pt-1">
+              ${subtasks.map((st, sIdx) => `
+                <div class="flex items-center justify-between rounded-lg bg-slate-950/60 p-2 text-xs border border-slate-800/80">
+                  <label class="flex items-center gap-2 cursor-pointer flex-1">
+                    <input type="checkbox" ${st.done ? 'checked' : ''} onchange="toggleSubtask('${item.id}', ${sIdx})" class="rounded border-slate-700 text-indigo-600 focus:ring-0" />
+                    <span class="${st.done ? 'line-through text-slate-500' : 'text-slate-300'}">${st.text}</span>
+                  </label>
+                  <button onclick="deleteSubtask('${item.id}', ${sIdx})" class="text-slate-600 hover:text-rose-400 p-1"><i data-lucide="x" class="h-3 w-3"></i></button>
+                </div>
+              `).join('')}
+
+              <!-- ADD SUBTASK -->
+              <div class="flex items-center gap-2 pt-1">
+                <input type="text" id="add-st-${item.id}" placeholder="+ Add custom deliverable..." onkeydown="if(event.key==='Enter') addSubtask('${item.id}')" class="flex-1 bg-slate-900/60 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+                <button onclick="addSubtask('${item.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-slate-300 font-medium">Add</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Render Timeline Flow tab
+      const flowContainer = document.getElementById('timeline-flow-container');
+      flowContainer.innerHTML = `
+        <div class="space-y-3">
+          <div class="p-3.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-xs flex items-center justify-between">
+            <span class="font-bold text-amber-300">01. WAKE-UP BUFFER (${schedule.wakeTime} → ${schedule.bufferEndTime})</span>
+            <span class="text-slate-400">30 minutes prayer & settling</span>
+          </div>
+          ${schedule.scheduledItems.map(item => `
+            <div class="p-3.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs flex items-center justify-between">
+              <div>
+                <span class="font-bold text-white block">${item.title}</span>
+                <span class="text-slate-400 font-mono text-[11px]">${formatTime12(item.startTime)} - ${formatTime12(item.endTime)}</span>
+              </div>
+              <span class="font-mono text-indigo-400 text-xs">${item.durationMin} mins</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // Render Circadian tab
+      const circContainer = document.getElementById('circadian-content-container');
+      circContainer.innerHTML = `
+        <div class="rounded-xl border border-indigo-500/30 bg-[#0d1424] p-5 sm:p-7 shadow-xl space-y-5">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+              <i data-lucide="moon" class="h-6 w-6"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white tracking-tight">Circadian Sleep Reset & Adenosine Roadmap</h3>
+              <p class="text-xs text-slate-400">Biological alignment to return safely to 5:00 AM without burnout</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Recommended Bedtime</span>
+              <p class="text-lg font-bold font-mono text-indigo-300">${formatTime12(circadian.recommendedBedtime)}</p>
+              <span class="text-[11px] text-slate-400">Allows 16h adenosine buildup</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Caffeine Cutoff</span>
+              <p class="text-lg font-bold font-mono text-amber-300">${formatTime12(circadian.caffeineCutoff)}</p>
+              <span class="text-[11px] text-slate-400">Zero caffeine after this hour</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Morning Sunlight</span>
+              <p class="text-lg font-bold font-mono text-emerald-300">10,000+ Lux</p>
+              <span class="text-[11px] text-slate-400">15m natural outdoor light</span>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-2">
+            <h4 class="text-xs font-bold uppercase text-slate-300 tracking-wider">Phased Shift-Back Schedule to 5:00 AM:</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              ${circadian.roadmap.map(r => `
+                <div class="p-3.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-white">${r.day}</span>
+                    <span class="text-[10px] font-mono text-indigo-400">${r.step}</span>
+                  </div>
+                  <p class="text-slate-300 font-mono text-[11px]">Wake: ${formatTime12(r.wake)} · Bed: ${formatTime12(r.bed)}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Re-initialize Lucide Icons
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    // USER INTERACTION HANDLERS
+    function switchTab(tab) {
+      document.getElementById('tab-planner').classList.add('hidden');
+      document.getElementById('tab-timeline').classList.add('hidden');
+      document.getElementById('tab-circadian').classList.add('hidden');
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+      // Update Nav active classes
+      ['planner', 'timeline', 'circadian'].forEach(t => {
+        const desktopBtn = document.getElementById(`nav-${t}`);
+        const mobBtn = document.getElementById(`mob-${t}`);
+        if (t === tab) {
+          desktopBtn.className = 'nav-btn py-1 border-b-2 border-indigo-500 text-white font-semibold transition-colors';
+          mobBtn.className = 'flex-1 min-h-[44px] flex items-center justify-center rounded-md font-medium bg-indigo-600/30 text-indigo-300 font-semibold';
+        } else {
+          desktopBtn.className = 'nav-btn py-1 border-b-2 border-transparent hover:text-slate-200 transition-colors';
+          mobBtn.className = 'flex-1 min-h-[44px] flex items-center justify-center rounded-md font-medium text-slate-400';
+        }
+      });
+
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function runScheduler() {
+      state.actualWakeTime = document.getElementById('input-wake-time').value || '10:00';
+      state.targetBedtime = document.getElementById('input-bedtime').value || '23:00';
+      saveState();
+      renderApp();
+      showToast('Schedule recalculated with custom sequence & constraints!');
+    }
+
+    function setWakePreset(time) {
+      document.getElementById('input-wake-time').value = time;
+      runScheduler();
+    }
+
+    function setScience(sci) {
+      state.scienceChoice = sci;
+      document.getElementById('btn-science-bio').className = sci === 'Biology'
+        ? 'py-2.5 px-3 rounded-lg border border-indigo-500 bg-indigo-950/60 text-white font-semibold text-xs transition-all'
+        : 'py-2.5 px-3 rounded-lg border border-slate-700 bg-slate-900/60 text-slate-400 font-semibold text-xs hover:text-white transition-all';
+      document.getElementById('btn-science-chem').className = sci === 'Chemistry'
+        ? 'py-2.5 px-3 rounded-lg border border-indigo-500 bg-indigo-950/60 text-white font-semibold text-xs transition-all'
+        : 'py-2.5 px-3 rounded-lg border border-slate-700 bg-slate-900/60 text-slate-400 font-semibold text-xs hover:text-white transition-all';
+      saveState();
+      renderApp();
+    }
+
+    function addFixedEvent() {
+      state.fixedEvents = state.fixedEvents || [];
+      state.fixedEvents.push({
+        id: 'fe-' + Date.now(),
+        name: 'Lesson / Commitment',
+        startTime: '14:00',
+        endTime: '15:30'
+      });
+      saveState();
+      renderApp();
+    }
+
+    function updateFixedEvent(idx, field, val) {
+      if (state.fixedEvents[idx]) {
+        state.fixedEvents[idx][field] = val;
+        saveState();
+        renderApp();
+      }
+    }
+
+    function removeFixedEvent(idx) {
+      state.fixedEvents.splice(idx, 1);
+      saveState();
+      renderApp();
+    }
+
+    function moveSequence(idx, dir) {
+      const arr = state.subjectSequence || ['quran', 'major_science', 'islamic_studies'];
+      const target = idx + dir;
+      if (target >= 0 && target < arr.length) {
+        const temp = arr[idx];
+        arr[idx] = arr[target];
+        arr[target] = temp;
+        state.subjectSequence = arr;
+        saveState();
+        renderApp();
+      }
+    }
+
+    function toggleBlockComplete(id) {
+      state.completedTasks[id] = !state.completedTasks[id];
+      saveState();
+      renderApp();
+      if (state.completedTasks[id]) playChime('complete');
+    }
+
+    function toggleSubtask(itemId, idx) {
+      if (!state.customSubtasks[itemId]) {
+        const schedule = calculateSchedule();
+        const item = schedule.scheduledItems.find(i => i.id === itemId);
+        state.customSubtasks[itemId] = (item ? item.defaultSubtasks : []).map(t => ({ text: t, done: false }));
+      }
+      state.customSubtasks[itemId][idx].done = !state.customSubtasks[itemId][idx].done;
+      saveState();
+      renderApp();
+      if (state.customSubtasks[itemId][idx].done) playChime('complete');
+    }
+
+    function addSubtask(itemId) {
+      const input = document.getElementById(`add-st-${itemId}`);
+      const text = input.value.trim();
+      if (!text) return;
+      if (!state.customSubtasks[itemId]) {
+        const schedule = calculateSchedule();
+        const item = schedule.scheduledItems.find(i => i.id === itemId);
+        state.customSubtasks[itemId] = (item ? item.defaultSubtasks : []).map(t => ({ text: t, done: false }));
+      }
+      state.customSubtasks[itemId].push({ text, done: false });
+      input.value = '';
+      saveState();
+      renderApp();
+    }
+
+    function deleteSubtask(itemId, idx) {
+      if (state.customSubtasks[itemId]) {
+        state.customSubtasks[itemId].splice(idx, 1);
+        saveState();
+        renderApp();
+      }
+    }
+
+    function saveBufferCheck() {
+      state.bufferChecks = {
+        1: document.getElementById('buf-1').checked,
+        2: document.getElementById('buf-2').checked,
+        3: document.getElementById('buf-3').checked,
+        4: document.getElementById('buf-4').checked
+      };
+      saveState();
+    }
+
+    // FOCUS TIMER LOGIC
+    let timerInterval = null;
+    let timerTotalSeconds = 0;
+    let timerRemainingSeconds = 0;
+    let timerIsRunning = false;
+    let currentTimerItemId = null;
+
+    function openFocusTimer(id, title, timeRange, durationMin) {
+      currentTimerItemId = id;
+      timerTotalSeconds = durationMin * 60;
+      timerRemainingSeconds = timerTotalSeconds;
+      timerIsRunning = false;
+
+      document.getElementById('timer-title').textContent = title;
+      document.getElementById('timer-time-range').textContent = timeRange;
+      document.getElementById('timer-status-text').textContent = 'Ready';
+      document.getElementById('btn-timer-toggle-label').textContent = 'Start Focus';
+
+      updateTimerDisplay();
+
+      // Render subtasks inside timer
+      const subtasks = state.customSubtasks[id] || [];
+      const listEl = document.getElementById('timer-subtasks-list');
+      listEl.innerHTML = subtasks.length ? subtasks.map((st, idx) => `
+        <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+          <input type="checkbox" ${st.done ? 'checked' : ''} onchange="toggleSubtask('${id}', ${idx}); openFocusTimer('${id}', '${title.replace(/'/g, "\\'")}', '${timeRange}', ${durationMin});" class="rounded border-slate-700 text-indigo-600 focus:ring-0" />
+          <span class="${st.done ? 'line-through text-slate-500' : ''}">${st.text}</span>
+        </label>
+      `).join('') : '<p class="text-slate-500 text-[11px]">No subtasks defined.</p>';
+
+      document.getElementById('focus-timer-modal').classList.remove('hidden');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function closeFocusTimer() {
+      clearInterval(timerInterval);
+      timerIsRunning = false;
+      document.getElementById('focus-timer-modal').classList.add('hidden');
+    }
+
+    function toggleTimer() {
+      if (timerIsRunning) {
+        clearInterval(timerInterval);
+        timerIsRunning = false;
+        document.getElementById('btn-timer-toggle-label').textContent = 'Resume Focus';
+        document.getElementById('timer-status-text').textContent = 'Paused';
+      } else {
+        timerIsRunning = true;
+        document.getElementById('btn-timer-toggle-label').textContent = 'Pause';
+        document.getElementById('timer-status-text').textContent = 'Focusing...';
+        playChime('start');
+
+        timerInterval = setInterval(() => {
+          if (timerRemainingSeconds > 0) {
+            timerRemainingSeconds--;
+            updateTimerDisplay();
+          } else {
+            clearInterval(timerInterval);
+            timerIsRunning = false;
+            document.getElementById('timer-status-text').textContent = 'Completed!';
+            playChime('complete');
+            if (currentTimerItemId) {
+              state.completedTasks[currentTimerItemId] = true;
+              saveState();
+              renderApp();
+            }
+          }
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerIsRunning = false;
+      timerRemainingSeconds = timerTotalSeconds;
+      document.getElementById('btn-timer-toggle-label').textContent = 'Start Focus';
+      document.getElementById('timer-status-text').textContent = 'Ready';
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(timerRemainingSeconds / 60);
+      const secs = timerRemainingSeconds % 60;
+      document.getElementById('timer-countdown').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+      // Progress ring (circumference is 2 * pi * 42 ~= 264)
+      const ring = document.getElementById('timer-progress-ring');
+      const offset = 264 - (timerRemainingSeconds / (timerTotalSeconds || 1)) * 264;
+      ring.style.strokeDashoffset = offset;
+    }
+
+    // COPY & EXPORT ACTIONS
+    function copyScheduleText() {
+      const schedule = calculateSchedule();
+      let text = `=========================================\nADAPTIVE STUDY PLANNER — DAILY TIMELINE\n=========================================\nActual Wake: ${formatTime12(schedule.wakeTime)}\nTarget Bedtime: ${formatTime12(schedule.bedtime)}\nCompression Tier: ${schedule.modeBadge}\n\n[01] 30-MIN MORNING BUFFER ZONE\n${formatTime12(schedule.wakeTime)} - ${formatTime12(schedule.bufferEndTime)}: Prayer, 500ml water, 10m sunlight exposure\n\n[02] SCHEDULED CORE SUBJECTS\n`;
+
+      schedule.scheduledItems.forEach((item, idx) => {
+        text += `\n#${idx + 1} ${item.title}\nTime: ${formatTime12(item.startTime)} - ${formatTime12(item.endTime)} (${item.durationMin}m)\n`;
+        const st = state.customSubtasks[item.id] || item.defaultSubtasks.map(t => ({ text: t }));
+        st.forEach(s => text += `  [ ] ${s.text}\n`);
+      });
+
+      navigator.clipboard.writeText(text);
+      showToast('Plaintext schedule copied to clipboard!');
+    }
+
+    function exportICSFile() {
+      const schedule = calculateSchedule();
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, '0');
+      const d = String(today.getDate()).padStart(2, '0');
+
+      let ics = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Adaptive Daily Scheduler//EN\nCALSCALE:GREGORIAN\n`;
+
+      schedule.scheduledItems.forEach(item => {
+        const dtStart = `${y}${m}${d}T${item.startTime.replace(':', '')}00`;
+        const dtEnd = `${y}${m}${d}T${item.endTime.replace(':', '')}00`;
+        ics += `BEGIN:VEVENT\nSUMMARY:${item.title}\nDTSTART:${dtStart}\nDTEND:${dtEnd}\nDESCRIPTION:Study block generated by Adaptive Daily Scheduler\nSTATUS:CONFIRMED\nEND:VEVENT\n`;
+      });
+
+      ics += `END:VCALENDAR`;
+
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `StudySchedule_${y}-${m}-${d}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('.ICS Calendar file downloaded!');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = msg;
+      toast.classList.remove('hidden');
+      toast.classList.add('flex');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.classList.remove('flex');
+      }, 3000);
+    }
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('input-wake-time').value = state.actualWakeTime || '10:00';
+      document.getElementById('input-bedtime').value = state.targetBedtime || '23:00';
+      setScience(state.scienceChoice || 'Biology');
+
+      if (state.bufferChecks) {
+        if (document.getElementById('buf-1')) document.getElementById('buf-1').checked = !!state.bufferChecks[1];
+        if (document.getElementById('buf-2')) document.getElementById('buf-2').checked = !!state.bufferChecks[2];
+        if (document.getElementById('buf-3')) document.getElementById('buf-3').checked = !!state.bufferChecks[3];
+        if (document.getElementById('buf-4')) document.getElementById('buf-4').checked = !!state.bufferChecks[4];
+      }
+
+      renderApp();
+    });
+  </script>
+</body>
+</html>
